@@ -20,10 +20,13 @@ Installing Dependencies
 Linux (Ubuntu)
 --------------
 
-Install [LLVM](http://llvm.org/) and a JRE 7.
+Install [LLVM](http://llvm.org/) and a JRE 7. You'll need a build environment
+and the `libgc` a conservative garbage collector aswell.
 
     sudo apt-get install llvm
     sudo apt-get install default-jre
+    sudo apt-get install build-essential
+    sudo apt-get install libgc1c2
 
 If you want to build `moco` yourself you'll need to install the following
 dependencies and a JDK 7.
@@ -42,9 +45,10 @@ Mac OS X
 > **Note:** Please make sure you have [homebrew](http://brew.sh/) and a JRE 7
 installed.
 
-Install [LLVM](http://llvm.org/) using homebrew:
+Install [LLVM](http://llvm.org/), a compiler and the `bdw-gc` using homebrew:
 
     brew install llvm
+    brew install bdw-gc
 
 If you want to build `moco` yourself you'll need to install the following
 dependencies and a JDK 7.

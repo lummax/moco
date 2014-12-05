@@ -5,7 +5,7 @@ jdk:
 
 before_install:
   - sudo apt-get update -qq
-  - sudo apt-get install -y llvm
+  - sudo apt-get install -y llvm build-essential libgc-dev
 
 script:
   - mvn compile

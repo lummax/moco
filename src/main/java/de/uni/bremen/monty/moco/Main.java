@@ -195,7 +195,7 @@ public class Main {
 		llcInput.close();
 
 		ProcessBuilder ccProcessBuilder =
-		        new ProcessBuilder("cc", "-x", "assembler", "-o", outputFile.getAbsolutePath(), "-");
+		        new ProcessBuilder("cc", "-x", "assembler", "-o", outputFile.getAbsolutePath(), "-", "-lgc");
 		Process ccProcess = ccProcessBuilder.start();
 		IOUtils.copy(llcProcess.getInputStream(), ccProcess.getOutputStream());
 		ccProcess.getOutputStream().close();

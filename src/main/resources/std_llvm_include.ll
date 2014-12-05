@@ -1,8 +1,9 @@
 ; Begin of the standard declarations and definitions every Monty program needs.
 declare void @exit(i32 %status) noreturn
-declare i8* @malloc(i64 %size) nounwind
-declare i8* @realloc(i8* %ptr, i64 %size) nounwind
-declare void @free(i8* %ptr) nounwind
+declare i8* @GC_malloc(i64 %size) nounwind
+declare i8* @GC_malloc_atomic(i64 %size) nounwind
+declare i8* @GC_realloc(i8* %ptr, i64 %size) nounwind
+declare void @GC_free(i8* %ptr) nounwind
 
 declare %struct._IO_FILE* @fdopen(i64, i8*) nounwind
 declare i32 @fgetc(%struct._IO_FILE*) nounwind
@@ -28,14 +29,14 @@ declare i32 @printf(i8* %format, ... ) nounwind
 ; Read at most <num> bytes from stdin and return the string if success. exit(4) in case of failure.
 define i8* @read_helper(i64 %num) {
     %nump = add i64 %num, 1
-    %str = call i8* @malloc(i64 %nump)
+    %str = call i8* @GC_malloc_atomic(i64 %nump)
     %stdin = call %struct._IO_FILE* @fdopen(i64 0, i8* getelementptr inbounds ([2 x i8]* @.stdin_mode, i32 0, i32 0))
     %res = call i8* @fgets(i8* %str, i64 %nump, %struct._IO_FILE* %stdin)
     %cmp_null = icmp eq i8* %res, null
     br i1 %cmp_null, label %fgets.error, label %fgets.success
 
     fgets.error:
-        call void @free(i8* %str)
+        call void @GC_free(i8* %str)
         call void @exit(i32 4)
         ret i8* null;
 
@@ -55,7 +56,7 @@ define i8* @readln_helper() {
 
     %stdin = call %struct._IO_FILE* @fdopen(i64 0, i8* getelementptr inbounds ([2 x i8]* @.stdin_mode, i32 0, i32 0))
 
-    %malloc_ptr = call i8* @malloc(i64 100)
+    %malloc_ptr = call i8* @GC_malloc_atomic(i64 100)
     store i8* %malloc_ptr, i8** %line
     store i8* %malloc_ptr, i8** %linep
     store i64 100, i64* %lenmax
@@ -82,7 +83,7 @@ define i8* @readln_helper() {
         %new_size = mul i64 %lenmax_raw, 2
         store i64 %new_size, i64* %lenmax
         %linep_raw = load i8** %linep
-        %new_linep = call i8* @realloc(i8* %linep_raw, i64 %new_size)
+        %new_linep = call i8* @GC_realloc(i8* %linep_raw, i64 %new_size)
         store i8* %new_linep, i8** %linen
         %is_null = icmp eq i8* %new_linep, null
         br i1 %is_null, label %readln.error, label %readln.lp.realloc.success
@@ -111,7 +112,7 @@ define i8* @readln_helper() {
 
     readln.error:
         %to_free = load i8** %linep
-        call void @free(i8* %to_free)
+        call void @GC_free(i8* %to_free)
         call void @exit(i32 4)
         ret i8* null;
 

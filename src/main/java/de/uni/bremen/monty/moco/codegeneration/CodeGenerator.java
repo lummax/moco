@@ -351,7 +351,7 @@ public class CodeGenerator {
 		LLVMIdentifier<LLVMType> sizeInt = llvmIdentifierFactory.newLocal((LLVMType) int64());
 		c.ptrtoint(sizeInt, (LLVMIdentifier) sizePtr);
 
-		LLVMIdentifier<LLVMPointer<LLVMInt8>> s = llvmIdentifierFactory.newGlobal("malloc", pointer(int8()));
+		LLVMIdentifier<LLVMPointer<LLVMInt8>> s = llvmIdentifierFactory.newGlobal("GC_malloc", pointer(int8()));
 		LLVMIdentifier<LLVMPointer<LLVMInt8>> mallocPtr = llvmIdentifierFactory.newLocal(s.getType());
 		c.call((LLVMIdentifier<LLVMType>) (LLVMIdentifier<?>) s, mallocPtr, sizeInt);
 		c.bitcast((LLVMIdentifier) result, (LLVMIdentifier) mallocPtr);

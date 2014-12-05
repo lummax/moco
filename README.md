@@ -1,3 +1,5 @@
+WARNING: This branch will currently **not** work on Windows.
+============================================================
 
 Moco [![Build Status](https://travis-ci.org/MontysCoconut/moco.svg?branch=master)](https://travis-ci.org/MontysCoconut/moco)
 ====

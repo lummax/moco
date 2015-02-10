@@ -1,8 +1,22 @@
 ; Begin of the standard declarations and definitions every Monty program needs.
+
 declare void @exit(i32 %status) noreturn
 declare i8* @malloc(i64 %size) nounwind
 declare i8* @realloc(i8* %ptr, i64 %size) nounwind
 declare void @free(i8* %ptr) nounwind
+
+%RCImmixCons = type {}
+%GCRTTI = type { i64, i64 }
+%GCObject = type { %GCHeader, %GCRTTI* }
+%GCHeader = type { i64, i8, i8, i8, i8, i8, i8 }
+
+declare %RCImmixCons* @rcx_create()
+declare %GCObject* @rcx_allocate(%RCImmixCons*, %GCRTTI*)
+declare void @rcx_collect(%RCImmixCons*, i8 zeroext, i8 zeroext)
+declare void @rcx_write_barrier(%RCImmixCons*, %GCObject*)
+declare void @rcx_destroy(%RCImmixCons*)
+
+@collector = common global %RCImmixCons* null, align 8
 
 declare %struct._IO_FILE* @fdopen(i64, i8*) nounwind
 declare i32 @fgetc(%struct._IO_FILE*) nounwind

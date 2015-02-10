@@ -297,6 +297,18 @@ public class CodeGenerator {
 
 		active.define(Arrays.asList(LLVMFunctionAttribute.ssp), mainFunction);
 		active.label("entry");
+
+		LLVMPointer<LLVMStructType> llvmRCXCollectorPointer = pointer(struct("RCImmixCons"));
+
+		LLVMIdentifier<LLVMPointer<LLVMStructType>> signature =
+		        llvmIdentifierFactory.newGlobal("rcx_create", llvmRCXCollectorPointer);
+		LLVMIdentifier<LLVMPointer<LLVMStructType>> globalCollector =
+		        llvmIdentifierFactory.newGlobal("collector", llvmRCXCollectorPointer);
+		LLVMIdentifier<LLVMPointer<LLVMStructType>> collector =
+		        llvmIdentifierFactory.newLocal(signature.getType(), false);
+		active.call((LLVMIdentifier<LLVMType>) (LLVMIdentifier<?>) signature, collector);
+
+		active.store(collector, llvmIdentifierFactory.pointerTo(globalCollector));
 	}
 
 	public void addFunction(CodeContext c, TypeDeclaration returnType,

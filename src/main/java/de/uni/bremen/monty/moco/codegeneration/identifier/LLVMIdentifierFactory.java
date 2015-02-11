@@ -142,6 +142,12 @@ public class LLVMIdentifierFactory {
 		        + ", i32 0, i32 0)", false);
 	}
 
+	public LLVMIdentifier<LLVMInt64> elementSize(LLVMType type) {
+		String extract =
+		        String.format("ptrtoint (%1$s* getelementptr inbounds (%1$s* null, i32 1) to i64)", type.toString());
+		return new LLVMIdentifier<>(int64(), extract, false);
+	}
+
 	public <T extends LLVMType> FunctionSignature<T> newFunction(T type, String s,
 	        List<LLVMIdentifier<? extends LLVMType>> llvmTypes) {
 		return new FunctionSignature<>(type, "@" + s, llvmTypes);

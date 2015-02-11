@@ -343,6 +343,13 @@ public class CodeGenerator {
 	}
 
 	public void returnMain(CodeContext c) {
+		LLVMPointer<LLVMStructType> llvmRCXCollectorPointer = pointer(struct("RCImmixCons"));
+
+		LLVMIdentifier<LLVMVoidType> signature = llvmIdentifierFactory.newGlobal("rcx_destroy", voidType());
+		LLVMIdentifier<LLVMPointer<LLVMStructType>> collector =
+		        resolveIfNeeded(c, llvmIdentifierFactory.newGlobal("collector", llvmRCXCollectorPointer));
+		c.callVoid((LLVMIdentifier<LLVMType>) (LLVMIdentifier<?>) signature, collector);
+
 		c.ret(llvmIdentifierFactory.constant(int32(), 0));
 	}
 

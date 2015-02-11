@@ -217,19 +217,26 @@ public class CodeGenerator {
 		String constructorName = classDeclaration.getMangledIdentifier().getSymbol() + "_constructor";
 		addFunction(c, classDeclaration, llvmParameter, constructorName);
 
-		LLVMPointer<LLVMType> selfType = mapToLLVMType(classDeclaration);
-		LLVMIdentifier<LLVMPointer<LLVMType>> selfReference = llvmIdentifierFactory.newLocal(selfType, false);
-		malloc(c, selfReference);
+		LLVMPointer<LLVMStructType> llvmRCXCollectorPointer = pointer(struct("RCImmixCons"));
+		LLVMIdentifier<LLVMPointer<LLVMStructType>> globalCollector =
+		        resolveIfNeeded(c, llvmIdentifierFactory.newGlobal("collector", llvmRCXCollectorPointer));
 
-		LLVMIdentifier<LLVMType> rttiPointer =
-		        (LLVMIdentifier<LLVMType>) (LLVMIdentifier<?>) getRTTIPointer(c, selfReference, classDeclaration);
-		LLVMIdentifier<LLVMType> rttiData =
+		LLVMIdentifier<LLVMPointer<LLVMStructType>> objectRTTIPointer =
 		        llvmIdentifierFactory.newGlobal(
 		                classDeclaration.getMangledIdentifier().getSymbol() + "_rtti_data",
-		                rttiPointer.getType());
-		c.store(rttiData, llvmIdentifierFactory.pointerTo(rttiPointer));
+		                pointer(struct(classDeclaration.getMangledIdentifier().getSymbol() + "_rtti_type")));
 
-		returnValue(c, (LLVMIdentifier) selfReference, classDeclaration);
+		LLVMIdentifier<LLVMPointer<LLVMStructType>> rttiPointer =
+		        llvmIdentifierFactory.newLocal(pointer(struct("GCRTTI")), false);
+		c.bitcast((LLVMIdentifier) rttiPointer, (LLVMIdentifier) objectRTTIPointer);
+
+		LLVMIdentifier<LLVMPointer<LLVMStructType>> signature =
+		        llvmIdentifierFactory.newGlobal("rcx_allocate", pointer(struct("GCObject")));
+		LLVMIdentifier<LLVMPointer<LLVMStructType>> objectPtr =
+		        llvmIdentifierFactory.newLocal(signature.getType(), false);
+		c.call((LLVMIdentifier<LLVMType>) (LLVMIdentifier<?>) signature, objectPtr, globalCollector, rttiPointer);
+
+		returnValue(c, (LLVMIdentifier) objectPtr, classDeclaration);
 	}
 
 	public LLVMIdentifier<LLVMType> callConstructor(CodeContext c, ClassDeclaration classDeclaration) {

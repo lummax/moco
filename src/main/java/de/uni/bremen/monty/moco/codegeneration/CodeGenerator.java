@@ -165,6 +165,25 @@ public class CodeGenerator {
 		return identifier;
 	}
 
+	private LLVMIdentifier<LLVMPointer<LLVMType>> getRTTIPointer(CodeContext c,
+	        LLVMIdentifier<LLVMPointer<LLVMType>> selfReference, ClassDeclaration classDeclaration) {
+		LLVMPointer<LLVMType> rttiType =
+		        pointer((LLVMType) struct(classDeclaration.getMangledIdentifier().getSymbol() + "_rtti_type"));
+		LLVMIdentifier<LLVMPointer<LLVMType>> rttiPointer =
+		        llvmIdentifierFactory.newLocal(pointer((LLVMType) struct("GCRTTI")), true);
+		c.getelementptr(
+		        (LLVMIdentifier<LLVMType>) (LLVMIdentifier<?>) rttiPointer,
+		        selfReference,
+		        llvmIdentifierFactory.constant(int32(), 0),
+		        llvmIdentifierFactory.constant(int32(), 0),
+		        llvmIdentifierFactory.constant(int32(), 1));
+		LLVMIdentifier<LLVMPointer<LLVMType>> resultPointer = llvmIdentifierFactory.newLocal(rttiType, true);
+		c.bitcast(
+		        (LLVMIdentifier) llvmIdentifierFactory.pointerTo(resultPointer),
+		        (LLVMIdentifier) llvmIdentifierFactory.pointerTo(rttiPointer));
+		return resultPointer;
+	}
+
 	private LLVMIdentifier<LLVMPointer<LLVMType>> getVMTPointer(CodeContext c,
 	        LLVMIdentifier<LLVMPointer<LLVMType>> selfReference, ClassDeclaration classDeclaration) {
 		LLVMPointer<LLVMType> vmtType =
@@ -172,9 +191,9 @@ public class CodeGenerator {
 		LLVMIdentifier<LLVMPointer<LLVMType>> vmtPointer = llvmIdentifierFactory.newLocal(vmtType, true);
 		c.getelementptr(
 		        (LLVMIdentifier<LLVMType>) (LLVMIdentifier<?>) vmtPointer,
-		        selfReference,
+		        resolveIfNeeded(c, getRTTIPointer(c, selfReference, classDeclaration)),
 		        llvmIdentifierFactory.constant(int32(), 0),
-		        llvmIdentifierFactory.constant(int32(), 0));
+		        llvmIdentifierFactory.constant(int32(), 1));
 		return vmtPointer;
 	}
 
@@ -202,13 +221,13 @@ public class CodeGenerator {
 		LLVMIdentifier<LLVMPointer<LLVMType>> selfReference = llvmIdentifierFactory.newLocal(selfType, false);
 		malloc(c, selfReference);
 
-		LLVMIdentifier<LLVMType> vmtPointer =
-		        (LLVMIdentifier<LLVMType>) (LLVMIdentifier<?>) getVMTPointer(c, selfReference, classDeclaration);
-		LLVMIdentifier<LLVMType> vmtData =
+		LLVMIdentifier<LLVMType> rttiPointer =
+		        (LLVMIdentifier<LLVMType>) (LLVMIdentifier<?>) getRTTIPointer(c, selfReference, classDeclaration);
+		LLVMIdentifier<LLVMType> rttiData =
 		        llvmIdentifierFactory.newGlobal(
-		                classDeclaration.getMangledIdentifier().getSymbol() + "_vmt_data",
-		                vmtPointer.getType());
-		c.store(vmtData, llvmIdentifierFactory.pointerTo(vmtPointer));
+		                classDeclaration.getMangledIdentifier().getSymbol() + "_rtti_data",
+		                rttiPointer.getType());
+		c.store(rttiData, llvmIdentifierFactory.pointerTo(rttiPointer));
 
 		returnValue(c, (LLVMIdentifier) selfReference, classDeclaration);
 	}
@@ -403,22 +422,25 @@ public class CodeGenerator {
 	        ClassDeclaration sourceType, ClassDeclaration resultType) {
 
 		pointer = resolveIfNeeded(c, pointer);
-		LLVMIdentifier<LLVMPointer<LLVMType>> vmt = getVMTPointer(c, pointer, sourceType);
-		vmt = resolveIfNeeded(c, vmt);
+		LLVMIdentifier<LLVMPointer<LLVMType>> rtti = getRTTIPointer(c, pointer, sourceType);
+		rtti = resolveIfNeeded(c, rtti);
 
 		LLVMType ctType = array(pointer(int8()), sourceType.getSuperClassDeclarationsRecursive().size() + 1);
-		LLVMIdentifier<LLVMPointer<LLVMType>> ct = llvmIdentifierFactory.newLocal(pointer(ctType), true);
-		c.getelementptr(ct, vmt, llvmIdentifierFactory.constant(int32(), 0), llvmIdentifierFactory.constant(int32(), 0));
-		ct = resolveIfNeeded(c, ct);
+		LLVMIdentifier<LLVMPointer<LLVMType>> ct = llvmIdentifierFactory.newLocal(pointer(ctType), false);
+		c.getelementptr(
+		        ct,
+		        rtti,
+		        llvmIdentifierFactory.constant(int32(), 0),
+		        llvmIdentifierFactory.constant(int32(), 2));
 
 		LLVMType pointerArrayType = array(pointer(int8()), 0);
 		LLVMIdentifier<LLVMPointer<LLVMType>> pointerArray = llvmIdentifierFactory.newLocal(pointer(pointerArrayType));
 		c.bitcast(pointerArray, ct);
 
-		LLVMType resultVMTType = struct(resultType.getMangledIdentifier().getSymbol() + "_vmt_type");
+		LLVMType resultVMTType = struct(resultType.getMangledIdentifier().getSymbol() + "_rtti_type");
 		LLVMIdentifier<LLVMPointer<LLVMType>> resultVMT =
 		        llvmIdentifierFactory.newGlobal(
-		                resultType.getMangledIdentifier().getSymbol() + "_vmt_data",
+		                resultType.getMangledIdentifier().getSymbol() + "_rtti_data",
 		                pointer(resultVMTType));
 		LLVMIdentifier<LLVMPointer<LLVMType>> resultPointer =
 		        llvmIdentifierFactory.newLocal(pointer((LLVMType) int8()));

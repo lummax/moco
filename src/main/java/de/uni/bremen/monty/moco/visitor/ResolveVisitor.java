@@ -83,9 +83,7 @@ public class ResolveVisitor extends VisitOnceVisitor {
 			}
 		}
 
-		// Make room for the ctable pointer
-		int vmtIndex = virtualMethodTable.size() + 1;
-
+		int vmtIndex = virtualMethodTable.size();
 		for (Declaration decl : node.getBlock().getDeclarations()) {
 			if (decl instanceof VariableDeclaration) {
 				VariableDeclaration varDecl = (VariableDeclaration) decl;

@@ -115,37 +115,14 @@ public class TypeConverter {
 
 	private void addClass(ClassDeclaration classDecl) {
 		String mangledNodeName = classDecl.getMangledIdentifier().getSymbol();
+
 		LLVMStructType llvmClassType = struct(classDecl.getMangledIdentifier().getSymbol());
 		List<LLVMType> llvmClassTypeDeclarations = new ArrayList<>();
-
-		LLVMStructType llvmVMTType = struct(mangledNodeName + "_vmt_type");
-		List<LLVMType> llvmVMTTypeDeclarations = new ArrayList<>();
-		llvmClassTypeDeclarations.add(pointer(llvmVMTType));
-
-		LLVMIdentifier<LLVMType> llvmVMTDataIdentifier =
-		        llvmIdentifierFactory.newGlobal(mangledNodeName + "_vmt_data", (LLVMType) llvmVMTType);
-		List<LLVMIdentifier<LLVMType>> llvmVMTDataInitializer = new ArrayList<>();
+		llvmClassTypeDeclarations.add(struct("GCObject"));
 
 		List<ClassDeclaration> recursiveSuperClassDeclarations = classDecl.getSuperClassDeclarationsRecursive();
-		LLVMArrayType llvmCTDataType = array(pointer(int8()), recursiveSuperClassDeclarations.size() + 1);
-		LLVMIdentifier<LLVMType> llvmCTDataIdentifier =
-		        llvmIdentifierFactory.newGlobal(mangledNodeName + "_ct_data", (LLVMType) llvmCTDataType);
-		List<LLVMIdentifier<LLVMType>> llvmCTDataInitializer = new ArrayList<>();
 
-		llvmVMTTypeDeclarations.add(pointer(llvmCTDataType));
-		llvmVMTDataInitializer.add((LLVMIdentifier<LLVMType>) (LLVMIdentifier<?>) llvmIdentifierFactory.pointerTo(llvmCTDataIdentifier));
-
-		for (ClassDeclaration classDeclaration : recursiveSuperClassDeclarations) {
-			// Ensure that addType() was called for this classDeclaration so that a VMT/CT was generated.
-			mapToLLVMType(classDeclaration);
-			LLVMIdentifier<LLVMType> vmtDataIdent =
-			        llvmIdentifierFactory.newGlobal(
-			                classDeclaration.getMangledIdentifier().getSymbol() + "_vmt_data",
-			                (LLVMType) pointer(struct(classDeclaration.getMangledIdentifier().getSymbol() + "_vmt_type")));
-			llvmCTDataInitializer.add(llvmIdentifierFactory.bitcast(vmtDataIdent, pointer(int8())));
-		}
-		llvmCTDataInitializer.add((LLVMIdentifier<LLVMType>) (LLVMIdentifier<?>) llvmIdentifierFactory.constantNull(pointer(int8())));
-
+		int memberCount = 0;
 		if (classDecl == CoreClasses.intType()) {
 			llvmClassTypeDeclarations.add(LLVMTypeFactory.int64());
 		} else if (classDecl == CoreClasses.boolType()) {
@@ -160,15 +137,25 @@ public class TypeConverter {
 			LLVMType llvmType = mapToLLVMType((TypeDeclaration) CoreClasses.objectType());
 			LLVMType array = struct(Arrays.asList(LLVMTypeFactory.int64(), LLVMTypeFactory.array(llvmType, 0)));
 			llvmClassTypeDeclarations.add(LLVMTypeFactory.pointer(array));
-		}
-
-		for (ClassDeclaration classDeclaration : recursiveSuperClassDeclarations) {
-			for (Declaration decl : classDeclaration.getBlock().getDeclarations()) {
-				if (decl instanceof VariableDeclaration) {
-					llvmClassTypeDeclarations.add(mapToLLVMType(((VariableDeclaration) decl).getType()));
+			// XXX FIXME This does not work with librcimmixcons
+		} else {
+			for (ClassDeclaration classDeclaration : recursiveSuperClassDeclarations) {
+				for (Declaration decl : classDeclaration.getBlock().getDeclarations()) {
+					if (decl instanceof VariableDeclaration) {
+						llvmClassTypeDeclarations.add(mapToLLVMType(((VariableDeclaration) decl).getType()));
+					}
 				}
 			}
+			memberCount = llvmClassTypeDeclarations.size() - 1;
 		}
+		constantContext.type(llvmClassType, llvmClassTypeDeclarations);
+
+		LLVMStructType llvmVMTType = struct(mangledNodeName + "_vmt_type");
+		List<LLVMType> llvmVMTTypeDeclarations = new ArrayList<>();
+		LLVMIdentifier<LLVMType> llvmVMTDataIdentifier =
+		        llvmIdentifierFactory.newGlobal(mangledNodeName + "_vmt_data", (LLVMType) llvmVMTType);
+		List<LLVMIdentifier<LLVMType>> llvmVMTDataInitializer = new ArrayList<>();
+
 		for (ProcedureDeclaration procedure : classDecl.getVirtualMethodTable()) {
 			if (!procedure.isInitializer()) {
 				LLVMType signature = mapToLLVMType(procedure);
@@ -179,17 +166,56 @@ public class TypeConverter {
 			}
 		}
 		constantContext.type(llvmVMTType, llvmVMTTypeDeclarations);
-		constantContext.type(llvmClassType, llvmClassTypeDeclarations);
-		constantContext.global(
-		        Linkage.priv,
-		        llvmCTDataIdentifier,
-		        true,
-		        llvmIdentifierFactory.constant(llvmCTDataType, llvmCTDataInitializer));
 		constantContext.global(
 		        Linkage.priv,
 		        llvmVMTDataIdentifier,
 		        true,
 		        llvmIdentifierFactory.constant(llvmVMTType, llvmVMTDataInitializer));
+
+		LLVMArrayType llvmCTDataType = array(pointer(int8()), recursiveSuperClassDeclarations.size() + 1);
+		LLVMIdentifier<LLVMType> llvmCTDataIdentifier =
+		        llvmIdentifierFactory.newGlobal(mangledNodeName + "_ct_data", (LLVMType) llvmCTDataType);
+		List<LLVMIdentifier<LLVMType>> llvmCTDataInitializer = new ArrayList<>();
+
+		for (ClassDeclaration classDeclaration : recursiveSuperClassDeclarations) {
+			// Ensure that addType() was called for this classDeclaration so that a VMT/CT was generated.
+			mapToLLVMType(classDeclaration);
+			LLVMIdentifier<LLVMType> rttiDataIdent =
+			        llvmIdentifierFactory.newGlobal(
+			                classDeclaration.getMangledIdentifier().getSymbol() + "_rtti_data",
+			                (LLVMType) pointer(struct(classDeclaration.getMangledIdentifier().getSymbol()
+			                        + "_rtti_type")));
+			llvmCTDataInitializer.add(llvmIdentifierFactory.bitcast(rttiDataIdent, pointer(int8())));
+		}
+		llvmCTDataInitializer.add((LLVMIdentifier<LLVMType>) (LLVMIdentifier<?>) llvmIdentifierFactory.constantNull(pointer(int8())));
+
+		LLVMStructType llvmGCRTTIType = struct("GCRTTI");
+		List<LLVMIdentifier<LLVMType>> llvmGCRTTIDataInitializer = new ArrayList<>();
+		llvmGCRTTIDataInitializer.add((LLVMIdentifier) llvmIdentifierFactory.elementSize(llvmClassType));
+		llvmGCRTTIDataInitializer.add(llvmIdentifierFactory.constant((LLVMType) int64(), memberCount));
+
+		LLVMStructType llvmRTTIType = struct(mangledNodeName + "_rtti_type");
+		List<LLVMType> llvmRTTITypeDeclarations = new ArrayList<>();
+		llvmRTTITypeDeclarations.add(struct("GCRTTI"));
+		llvmRTTITypeDeclarations.add(pointer(llvmVMTType));
+		llvmRTTITypeDeclarations.add(llvmCTDataType);
+		LLVMIdentifier<LLVMType> llvmRTTIDataIdentifier =
+		        llvmIdentifierFactory.newGlobal(mangledNodeName + "_rtti_data", (LLVMType) llvmRTTIType);
+		List<LLVMIdentifier<LLVMType>> llvmRTTIDataInitializer = new ArrayList<>();
+		llvmRTTIDataInitializer.add((LLVMIdentifier) llvmIdentifierFactory.constant(
+		        llvmGCRTTIType,
+		        llvmGCRTTIDataInitializer));
+		llvmRTTIDataInitializer.add((LLVMIdentifier) llvmIdentifierFactory.pointerTo(llvmVMTDataIdentifier));
+		llvmRTTIDataInitializer.add((LLVMIdentifier) llvmIdentifierFactory.constant(
+		        llvmCTDataType,
+		        llvmCTDataInitializer));
+
+		constantContext.type(llvmRTTIType, llvmRTTITypeDeclarations);
+		constantContext.global(
+		        Linkage.priv,
+		        llvmRTTIDataIdentifier,
+		        true,
+		        llvmIdentifierFactory.constant(llvmRTTIType, llvmRTTIDataInitializer));
 	}
 
 	public LLVMPointer<LLVMStructType> mapToLLVMType(ClassDeclaration type) {

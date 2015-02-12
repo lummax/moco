@@ -403,6 +403,18 @@ public class CodeGenerator {
 		return result;
 	}
 
+	public <T extends LLVMType> void writeBarrier(CodeContext c, LLVMIdentifier<LLVMType> object) {
+		LLVMPointer<LLVMStructType> llvmRCXCollectorPointer = pointer(struct("RCImmixCons"));
+
+		LLVMIdentifier<LLVMVoidType> signature = llvmIdentifierFactory.newGlobal("rcx_write_barrier", voidType());
+		LLVMIdentifier<LLVMPointer<LLVMStructType>> collector =
+		        resolveIfNeeded(c, llvmIdentifierFactory.newGlobal("collector", llvmRCXCollectorPointer));
+		LLVMIdentifier<LLVMPointer<LLVMStructType>> objectPtr =
+		        llvmIdentifierFactory.newLocal(pointer(struct("GCObject")), false);
+		c.bitcast((LLVMIdentifier) objectPtr, (LLVMIdentifier) resolveIfNeeded(c, object));
+		c.callVoid((LLVMIdentifier<LLVMType>) (LLVMIdentifier<?>) signature, collector, objectPtr);
+	}
+
 	public <T extends LLVMType> void assign(CodeContext c, LLVMIdentifier<T> target, LLVMIdentifier<T> source) {
 		source = resolveIfNeeded(c, source);
 		source = castIfNeeded(c, source, target.getType());

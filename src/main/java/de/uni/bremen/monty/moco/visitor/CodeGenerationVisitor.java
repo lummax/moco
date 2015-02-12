@@ -198,6 +198,12 @@ public class CodeGenerationVisitor extends BaseVisitor {
 		super.visit(node);
 		LLVMIdentifier<LLVMType> source = stack.pop();
 		LLVMIdentifier<LLVMType> target = stack.pop();
+		if (node.getLeft() instanceof MemberAccess) {
+			LLVMIdentifier<LLVMType> object = stack.pop();
+			if (!(node.getRight() instanceof ZeroExpression)) {
+				codeGenerator.writeBarrier(contextUtils.active(), object);
+			}
+		}
 		codeGenerator.assign(contextUtils.active(), target, source);
 	}
 
@@ -240,7 +246,10 @@ public class CodeGenerationVisitor extends BaseVisitor {
 			llvmIdentifier =
 			        codeGenerator.resolveGlobalVarName(node.getMangledIdentifier().getSymbol(), node.getType());
 		} else if (varDeclaration.isAttribute()) {
-			LLVMIdentifier<?> leftIdentifier = stack.pop();
+			LLVMIdentifier<?> leftIdentifier = stack.peek();
+			if (!node.getLValue()) {
+				stack.pop();
+			}
 			llvmIdentifier =
 			        codeGenerator.accessMember(
 			                contextUtils.active(),

@@ -170,6 +170,17 @@ public class CodeGenerationVisitor extends BaseVisitor {
 		if (node.getParentNode() == null) {
 			openNewFunctionScope();
 			codeGenerator.addMain(contextUtils.active());
+			List<VariableDeclaration> globalVariables = new ArrayList<>();
+			for (ModuleDeclaration module : node.getModulesRecursive()) {
+				for (Declaration decl : module.getBlock().getDeclarations()) {
+					if (decl instanceof VariableDeclaration) {
+						if (((VariableDeclaration) decl).getIsGlobal()) {
+							globalVariables.add((VariableDeclaration) decl);
+						}
+					}
+				}
+			}
+			codeGenerator.add_global_gc_roots(contextUtils.active(), globalVariables);
 
 			super.visit(node);
 

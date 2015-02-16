@@ -14,6 +14,7 @@ declare %RCImmixCons* @rcx_create()
 declare %GCObject* @rcx_allocate(%RCImmixCons*, %GCRTTI*)
 declare void @rcx_collect(%RCImmixCons*, i8 zeroext, i8 zeroext)
 declare void @rcx_write_barrier(%RCImmixCons*, %GCObject*)
+declare void @rcx_set_static_root(%RCImmixCons*, i8*)
 declare void @rcx_destroy(%RCImmixCons*)
 
 @collector = common global %RCImmixCons* null, align 8

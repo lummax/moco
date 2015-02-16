@@ -415,6 +415,23 @@ public class CodeGenerator {
 		c.callVoid((LLVMIdentifier<LLVMType>) (LLVMIdentifier<?>) signature, collector, objectPtr);
 	}
 
+	public void add_global_gc_roots(CodeContext c, List<VariableDeclaration> globalVariables) {
+		LLVMPointer<LLVMStructType> llvmRCXCollectorPointer = pointer(struct("RCImmixCons"));
+		LLVMIdentifier<LLVMPointer<LLVMStructType>> collector =
+		        resolveIfNeeded(c, llvmIdentifierFactory.newGlobal("collector", llvmRCXCollectorPointer));
+
+		LLVMIdentifier<LLVMVoidType> signature = llvmIdentifierFactory.newGlobal("rcx_set_static_root", voidType());
+		LLVMType addressPointerType = pointer(int8());
+		for (VariableDeclaration variable : globalVariables) {
+			LLVMType llvmType = mapToLLVMType(variable.getType());
+			LLVMIdentifier<LLVMPointer<LLVMType>> llvmVariable =
+			        llvmIdentifierFactory.newGlobal(variable.getMangledIdentifier().getSymbol(), pointer(llvmType));
+			LLVMIdentifier<LLVMType> llvmAddressPointer = llvmIdentifierFactory.newLocal(addressPointerType);
+			c.bitcast((LLVMIdentifier) llvmAddressPointer, (LLVMIdentifier) llvmVariable);
+			c.callVoid((LLVMIdentifier<LLVMType>) (LLVMIdentifier<?>) signature, collector, llvmAddressPointer);
+		}
+	}
+
 	public <T extends LLVMType> void assign(CodeContext c, LLVMIdentifier<T> target, LLVMIdentifier<T> source) {
 		source = resolveIfNeeded(c, source);
 		source = castIfNeeded(c, source, target.getType());

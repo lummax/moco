@@ -83,7 +83,7 @@ public class CodeContext extends CodeWriter {
 	 * @return Address of the dereferenced value */
 	public <T extends LLVMType> LLVMIdentifier<T> load(LLVMIdentifier<LLVMPointer<T>> sourcePointer,
 	        LLVMIdentifier<T> identifier) {
-		appendLine(identifier.getName() + " = load " + sourcePointer);
+		appendLine(identifier.getName() + " = load " + sourcePointer.getType().getInternalType() + ", " + sourcePointer);
 		return identifier;
 	}
 
@@ -111,9 +111,10 @@ public class CodeContext extends CodeWriter {
 	@SafeVarargs
 	public final void getelementptr(LLVMIdentifier<? extends LLVMType> varIdentifier,
 	        LLVMIdentifier<? extends LLVMType> pointer, LLVMIdentifier<? extends LLVMType>... offsets) {
-		appendLine(varIdentifier.getName() + " = getelementptr inbounds " + pointer + ", "
+		appendLine(varIdentifier.getName() + " = getelementptr inbounds "
+		        + ((LLVMPointer<LLVMType>) pointer.getType()).getInternalType() + ", " + pointer + ", "
 
-		+ StringUtils.join(offsets, ','));
+		        + StringUtils.join(offsets, ','));
 	}
 
 	// ---------------- Other Operations ---------------------------------------

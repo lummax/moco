@@ -138,8 +138,8 @@ public class LLVMIdentifierFactory {
 		LLVMArrayType<T> arrayType = identifier.getType();
 		T typeInArray = arrayType.getInternalType();
 		LLVMPointer<T> pointer = pointer(typeInArray);
-		return new LLVMIdentifier<>(pointer, "getelementptr inbounds (" + arrayType + "* " + identifier.getName()
-		        + ", i32 0, i32 0)", false);
+		return new LLVMIdentifier<>(pointer, "getelementptr inbounds (" + arrayType + ", " + arrayType + "* "
+		        + identifier.getName() + ", i32 0, i32 0)", false);
 	}
 
 	public <T extends LLVMType> FunctionSignature<T> newFunction(T type, String s,
